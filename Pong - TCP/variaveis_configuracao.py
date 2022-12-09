@@ -1,0 +1,11 @@
+#Cores
+AZUL = (0, 0, 139)
+PRETO = (0, 0, 0)
+BRANCO = (255, 255, 255)
+VERMELHO = (255, 0, 0)
+
+#Jogalibidade
+FPS = 60
+LARGURA_RAQUETE = 20
+ALTURA_RAQUETE = 100
+RAIO_BOLA = 7
