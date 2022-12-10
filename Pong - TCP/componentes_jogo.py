@@ -1,5 +1,5 @@
 import pygame
-from variaveis_configuracao import BRANCO, PRETO
+from variaveis_configuracao import BRANCO, PRETO, VELOCIDADE_MAXIMA_BOLA, ALTURA_JANELA, LARGURA_JANELA, RAIO_BOLA, ALTURA_RAQUETE, LARGURA_RAQUETE
 
 class Jogador:
 
@@ -11,7 +11,7 @@ class Jogador:
         self.velocidade = 4
         self.cor = cor
 
-    def movimento(self, subir=True):
+    def movimento(self, subir = True):
         if subir:
             self.y -= self.velocidade
         else:
@@ -25,14 +25,12 @@ class Jogador:
         pygame.draw.rect(janela, self.cor, (self.x, self.y, self.largura, self.altura))
 
 class Bola:
-    
-    VELOCIDADE_MAXIMA = 4
 
     def __init__(self, x_inicial, y_inicial, raio, cor = BRANCO):
         self.x = self.x_partida = x_inicial
         self.y = self.y_partida = y_inicial
         self.raio = raio
-        self.x_velocidade = self.VELOCIDADE_MAXIMA
+        self.x_velocidade = VELOCIDADE_MAXIMA_BOLA
         self.y_velocidade = 0
         self.cor = cor
 
@@ -50,12 +48,107 @@ class Bola:
         pygame.draw.circle(janela, self.cor, (self.x, self.y), self.raio)
 
 
+class Controle:
+
+    def __init__(self):
+        self.prontos = 0
+        self.pontuacao_primeiro_jogador = 0
+        self.pontuacao_segundo_jogador = 0
+        self.primeiro_jogador = Jogador(10, ALTURA_JANELA//2 - ALTURA_RAQUETE // 2, LARGURA_RAQUETE, ALTURA_RAQUETE)
+        self.segundo_jogador = Jogador(LARGURA_JANELA - 10 - LARGURA_RAQUETE, ALTURA_JANELA // 2 - ALTURA_RAQUETE // 2, LARGURA_RAQUETE, ALTURA_RAQUETE)
+        self.bola = Bola(LARGURA_JANELA // 2, ALTURA_JANELA // 2, RAIO_BOLA)
+
+    def pegar_primeiro_jogador(self):
+        return self.primeiro_jogador
+
+    def pegar_segundo_jogador(self):
+        return self.segundo_jogador
+
+    def pegar_pontuacao_primeiro_jogador(self):
+        return self.pontuacao_primeiro_jogador
+
+    def pegar_pontuacao_segundo_jogador(self):
+        return self.pontuacao_segundo_jogador
+
+    def movimentar_bola(self):
+        self.bola.movimento()
+
+    def todos_prontos(self):
+        return self.prontos
+
+    def pausar_partida(self):
+        self.prontos = 0
+
+    def comecar_partida(self):
+        self.prontos = 1
+
+    def recomecar(self):
+        self.prontos = self.pontuacao_primeiro_jogador = self.pontuacao_segundo_jogador = 0
+        self.bola.recomecar()
+        self.primeiro_jogador.recomecar()
+        self.segundo_jogador.recomecar()
+
+    def atualizacao_placar(self):
+        if self.bola.x < 0:
+            self.pontuacao_segundo_jogador += 1
+            self.bola.recomecar()
+
+        elif self.bola.x > LARGURA_JANELA:
+            self.pontuacao_primeiro_jogador += 1
+            self.bola.recomecar()
+
+    def posicao_atualizada(self):
+        return f'{self.prontos},{self.primeiro_jogador.x},{self.primeiro_jogador.y},{self.segundo_jogador.x},{self.segundo_jogador.y},{self.bola.x},{self.bola.y},{self.bola.x_velocidade},{self.bola.y_velocidade},{self.pontuacao_primeiro_jogador},{self.pontuacao_segundo_jogador}'
+    
+    def tratamento_colisao(self):
+        
+        if self.bola.y + self.bola.raio >= ALTURA_JANELA:
+            self.bola.y_velocidade *= -1
+        elif self.bola.y - self.bola.raio <= 0:
+            self.bola.y_velocidade *= -1
+
+        if self.bola.x_velocidade < 0:
+            if self.bola.y >= self.primeiro_jogador.y and self.bola.y <= self.primeiro_jogador.y + self.primeiro_jogador.altura:
+                
+                if self.bola.x - self.bola.raio <= self.primeiro_jogador.x + self.primeiro_jogador.largura:
+                    self.bola.x_velocidade *= -1
+
+                    meio_y = self.primeiro_jogador.y + self.primeiro_jogador.altura / 2
+                    diferenca_em_y = meio_y - self.bola.y
+                    fator_reducao = (self.primeiro_jogador.altura / 2) / VELOCIDADE_MAXIMA_BOLA
+                    y_velocidade = diferenca_em_y / fator_reducao
+                    self.bola.y_velocidade = -1 * y_velocidade
+
+        else:
+            if self.bola.y >= self.segundo_jogador.y and self.bola.y <= self.segundo_jogador.y + self.segundo_jogador.altura:
+                if self.bola.x + self.bola.raio >= self.segundo_jogador.x:
+                    self.bola.x_velocidade *= -1
+
+                    meio_y = self.segundo_jogador.y + self.segundo_jogador.altura / 2
+                    diferenca_em_y = meio_y - self.bola.y
+                    fator_reducao = (self.segundo_jogador.altura / 2) / VELOCIDADE_MAXIMA_BOLA
+                    y_velocidade = diferenca_em_y / fator_reducao
+                    self.bola.y_velocidade = -1 * y_velocidade
+
+    def identificar_jogador(self, identificador_jogador):
+        return self.segundo_jogador if identificador_jogador else self.primeiro_jogador
+
+    def movimentacao_raquete(self, subir, descer, identificador_jogador):
+
+        jogador = self.identificar_jogador(identificador_jogador)
+        
+        if subir and jogador.y - jogador.velocidade >= 0:
+            jogador.movimento(subir = True)
+
+        elif descer and jogador.y + jogador.velocidade + jogador.altura <= ALTURA_JANELA:
+            jogador.movimento(subir = False)
+
+    
+
 class Canvas:
 
-    def __init__(self, largura, altura, nome = "Nenhum"):
-        self.largura = largura
-        self.altura = altura
-        self.janela = pygame.display.set_mode((largura, altura))
+    def __init__(self, nome = "Nenhum"):
+        self.janela = pygame.display.set_mode((LARGURA_JANELA, ALTURA_JANELA))
         pygame.display.set_caption(nome)
 
     @staticmethod
@@ -67,7 +160,7 @@ class Canvas:
         fonte = pygame.font.SysFont("comicsans", tamanho)
         return fonte.render(texto, 1, cor)
 
-    def desenhar_texto(self, texto_renderizado, x, y, atualiza):
+    def desenhar_texto(self, texto_renderizado, x, y, atualiza = False):
         self.janela.blit(texto_renderizado, (x, y))
         if atualiza:
             self.atualizar()
@@ -84,8 +177,8 @@ class Canvas:
         texto_rederizado_pontuacao_segundo_jogador = self.criar_texto_rederizado(f"{pontuacao_segundo_jogador}", 50)
 
         #Desenha o placar
-        self.desenhar_texto(texto_rederizado_pontuacao_primeiro_jogador, LARGURA // 4 - texto_rederizado_pontuacao_primeiro_jogador.get_width() // 2, 20, False)
-        self.desenhar_texto(texto_rederizado_pontuacao_segundo_jogador, LARGURA * (3 / 4) - texto_rederizado_pontuacao_segundo_jogador.get_width() // 2, 20, False)
+        self.desenhar_texto(texto_rederizado_pontuacao_primeiro_jogador, LARGURA // 4 - texto_rederizado_pontuacao_primeiro_jogador.get_width() // 2, 20)
+        self.desenhar_texto(texto_rederizado_pontuacao_segundo_jogador, LARGURA * (3 / 4) - texto_rederizado_pontuacao_segundo_jogador.get_width() // 2, 20)
 
         #Desenha a linha que divide a janela ao meio
         for i in range(10, ALTURA, ALTURA // 20):

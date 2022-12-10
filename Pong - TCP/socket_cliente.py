@@ -1,6 +1,6 @@
 import socket
 
-class Rede:
+class SocketCliente:
 
     def __init__(self):
         self.cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -11,7 +11,7 @@ class Rede:
 
     def conectar(self):
         self.cliente.connect(self.endereco)
-        return self.cliente.recv(2048).decode()
+        return self.cliente.recv(4096).decode()
 
     def send(self, dado):
         try:
