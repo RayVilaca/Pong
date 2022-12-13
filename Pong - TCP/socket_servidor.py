@@ -20,10 +20,3 @@ class SocketServidor:
 
         self.servidor.listen(2)
         print("Esperando por uma conexão...")
-
-    def send(self, dado):
-        try:
-            self.cliente.send(str.encode(dado))
-            return self.cliente.recv(4096).decode()
-        except socket.error as e:
-            return str(e)

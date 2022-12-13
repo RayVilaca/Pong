@@ -24,10 +24,24 @@ class Servidor:
                 conn.close()
                 continue
 
-            start_new_thread(self.thread_cliente, (conn, self.identificadores.pop()))
+            start_new_thread(self.thread_cliente, (conn, self.pegar_identificador()))
 
 
+    def receber_dados(self, conn):
+        data = conn.recv(4096)
+        reply = data.decode('utf-8')
 
+        if not data:
+            return None, None
+
+        return map(int, reply.split(','))
+
+    def pegar_identificador(self):
+        return self.identificadores.pop()
+
+    def devolver_identificador(self, identificador_jogador):
+        self.identificadores.append(identificador_jogador)
+        self.identificadores.sort(reverse = True)
 
     def thread_cliente(self, conn, identificador_jogador):
         
@@ -35,7 +49,6 @@ class Servidor:
         conn.send(str.encode(str(identificador_jogador)))
         reply = ''
         
-        print(len(self.identificadores))
         if len(self.identificadores) == 1:
             self.controle = Controle()
 
@@ -53,16 +66,12 @@ class Servidor:
                     self.controle.recomecar()
                     self.controle.comecar_partida()
 
-                data = conn.recv(4096)
-                reply = data.decode('utf-8')
+                subir, descer = self.receber_dados(conn)
 
-                if not data:
+                if subir == None and descer == None:
                     break
-
-                subir, descer = map(int, reply.split(','))
                 
-                print("Recebido: " + reply)
-                print(f'{identificador_jogador}: {subir}, {descer}')
+                print(f"Identificador[{identificador_jogador}]: subir({'X' if subir else ''}), descer({'X' if descer else ''})")
 
                 if subir or descer:
                     self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
@@ -76,8 +85,7 @@ class Servidor:
 
         print("Conexão fechada")
 
-        self.identificadores.append(identificador_jogador)
-        self.identificadores.sort(reverse = True)
+        self.devolver_identificador(identificador_jogador)
         self.controle.pausar_partida()
         conn.close()
 
