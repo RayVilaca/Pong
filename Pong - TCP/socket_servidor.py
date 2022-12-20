@@ -2,10 +2,10 @@ import socket
 
 class SocketServidor:
 
-    def __init__(self):
+    def __init__(self, ip, porta):
         self.servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ip = "192.168.56.1"
-        self.porta = 5555
+        self.ip = ip
+        self.porta = porta
         self.endereco = (self.ip, self.porta)
         self.escutar()
 
@@ -19,4 +19,4 @@ class SocketServidor:
             print(str(e))
 
         self.servidor.listen(2)
-        print("Esperando por uma conexão...")
+        print(f"Esperando por uma conexão em {self.endereco}")

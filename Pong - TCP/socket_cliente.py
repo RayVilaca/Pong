@@ -2,10 +2,10 @@ import socket
 
 class SocketCliente:
 
-    def __init__(self):
+    def __init__(self, ip_servidor, porta_servidor):
         self.cliente = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.servidor = "192.168.56.1"
-        self.porta = 5555
+        self.servidor = ip_servidor
+        self.porta = porta_servidor
         self.endereco = (self.servidor, self.porta)
         self.identificador_jogador = self.conectar()
 
@@ -13,9 +13,15 @@ class SocketCliente:
         self.cliente.connect(self.endereco)
         return self.cliente.recv(4096).decode()
 
-    def send(self, dado):
+    def enviar(self, dado):
         try:
             self.cliente.send(str.encode(dado))
+            return self.cliente.recv(4096).decode()
+        except socket.error as e:
+            return str(e)
+
+    def receber(self):
+        try:
             return self.cliente.recv(4096).decode()
         except socket.error as e:
             return str(e)

@@ -1,5 +1,5 @@
 import pygame
-from variaveis_configuracao import BRANCO, PRETO, VELOCIDADE_MAXIMA_BOLA, ALTURA_JANELA, LARGURA_JANELA, RAIO_BOLA, ALTURA_RAQUETE, LARGURA_RAQUETE
+from variaveis_configuracao import BRANCO, VERMELHO, AZUL, PRETO, VELOCIDADE_MAXIMA_BOLA, ALTURA_JANELA, LARGURA_JANELA, RAIO_BOLA, ALTURA_RAQUETE, LARGURA_RAQUETE
 
 class Jogador:
 
@@ -47,8 +47,42 @@ class Bola:
     def desenhar(self, janela):
         pygame.draw.circle(janela, self.cor, (self.x, self.y), self.raio)
 
+class Controle_Cliente:
 
-class Controle:
+    def __init__(self):
+        self.prontos = 0
+        self.canvas = Canvas("Pong")
+        self.pontuacao_primeiro_jogador = 0
+        self.pontuacao_segundo_jogador = 0
+        self.primeiro_jogador = Jogador(10, ALTURA_JANELA//2 - ALTURA_RAQUETE // 2, LARGURA_RAQUETE, ALTURA_RAQUETE, VERMELHO)
+        self.segundo_jogador = Jogador(LARGURA_JANELA - 10 - LARGURA_RAQUETE, ALTURA_JANELA // 2 - ALTURA_RAQUETE // 2, LARGURA_RAQUETE, ALTURA_RAQUETE, AZUL)
+        self.bola = Bola(LARGURA_JANELA // 2, ALTURA_JANELA // 2, RAIO_BOLA)
+
+    def desenhar(self):
+        if not self.prontos:
+            texto_rederizado = self.canvas.criar_texto_rederizado("Esperando por jogador...", 50, VERMELHO)
+            self.canvas.desenhar_texto(texto_rederizado, LARGURA_JANELA / 2 - texto_rederizado.get_width() / 2, ALTURA_JANELA / 2 - texto_rederizado.get_height() / 2, True)
+        else: 
+            self.canvas.desenhar_componentes(ALTURA_JANELA, LARGURA_JANELA, self.primeiro_jogador, self.segundo_jogador, self.bola, self.pontuacao_primeiro_jogador, self.pontuacao_segundo_jogador)
+
+    def descompactar_dados_placar(self, dado):
+        d = dado.split(",")
+        self.pontuacao_primeiro_jogador = int(float(d[0]))
+        self.pontuacao_segundo_jogador = int(float(d[1]))
+
+    def descompactar_dados(self, dado):
+        d = dado.split(",")
+        self.prontos = int(float(d[0]))
+        self.primeiro_jogador.x = int(float(d[1]))
+        self.primeiro_jogador.y = int(float(d[2]))
+        self.segundo_jogador.x = int(float(d[3]))
+        self.segundo_jogador.y = int(float(d[4]))
+        self.bola.x = int(float(d[5]))
+        self.bola.y = int(float(d[6]))
+        self.bola.x_velocidade = int(float(d[7]))
+        self.bola.y_velocidade = int(float(d[8]))
+
+class Controle_Servidor:
 
     def __init__(self):
         self.prontos = 0
@@ -97,8 +131,11 @@ class Controle:
             self.pontuacao_primeiro_jogador += 1
             self.bola.recomecar()
 
+    def placar_atualizado(self):
+        return f'{self.pontuacao_primeiro_jogador},{self.pontuacao_segundo_jogador}'
+
     def posicao_atualizada(self):
-        return f'{self.prontos},{self.primeiro_jogador.x},{self.primeiro_jogador.y},{self.segundo_jogador.x},{self.segundo_jogador.y},{self.bola.x},{self.bola.y},{self.bola.x_velocidade},{self.bola.y_velocidade},{self.pontuacao_primeiro_jogador},{self.pontuacao_segundo_jogador}'
+        return f'{self.prontos},{self.primeiro_jogador.x},{self.primeiro_jogador.y},{self.segundo_jogador.x},{self.segundo_jogador.y},{self.bola.x},{self.bola.y},{self.bola.x_velocidade},{self.bola.y_velocidade}'
     
     def tratamento_colisao(self):
         
