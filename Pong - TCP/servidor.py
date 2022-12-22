@@ -10,7 +10,7 @@ class Servidor:
     def __init__(self):
         self.socket = SocketServidor("192.168.56.1", 5555)
         self.socket_placar = SocketServidor("192.168.56.1", 6666)
-        self.controle = None
+        self.controle = Controle_Servidor()
         self.identificadores = [1, 0]
 
     def executar(self):
@@ -58,7 +58,7 @@ class Servidor:
         reply = ''
         
         if len(self.identificadores) == 1:
-            self.controle = Controle_Servidor()
+            self.controle.recomecar()
 
         else:
             self.controle.comecar_partida()

@@ -67,20 +67,20 @@ class Controle_Cliente:
 
     def descompactar_dados_placar(self, dado):
         d = dado.split(",")
-        self.pontuacao_primeiro_jogador = int(float(d[0]))
-        self.pontuacao_segundo_jogador = int(float(d[1]))
+        self.pontuacao_primeiro_jogador = int(d[0])
+        self.pontuacao_segundo_jogador = int(d[1])
 
     def descompactar_dados(self, dado):
         d = dado.split(",")
-        self.prontos = int(float(d[0]))
-        self.primeiro_jogador.x = int(float(d[1]))
-        self.primeiro_jogador.y = int(float(d[2]))
-        self.segundo_jogador.x = int(float(d[3]))
-        self.segundo_jogador.y = int(float(d[4]))
-        self.bola.x = int(float(d[5]))
-        self.bola.y = int(float(d[6]))
-        self.bola.x_velocidade = int(float(d[7]))
-        self.bola.y_velocidade = int(float(d[8]))
+        self.prontos = int(d[0])
+        self.primeiro_jogador.x = int(d[1])
+        self.primeiro_jogador.y = int(d[2])
+        self.segundo_jogador.x = int(d[3])
+        self.segundo_jogador.y = int(d[4])
+        self.bola.x = int(d[5])
+        self.bola.y = int(d[6])
+        self.bola.x_velocidade = int(d[7])
+        self.bola.y_velocidade = int(d[8])
 
 class Controle_Servidor:
 
@@ -116,8 +116,12 @@ class Controle_Servidor:
     def comecar_partida(self):
         self.prontos = 1
 
+    def zerar_placar(self):
+        self.pontuacao_primeiro_jogador = self.pontuacao_segundo_jogador = 0
+
     def recomecar(self):
-        self.prontos = self.pontuacao_primeiro_jogador = self.pontuacao_segundo_jogador = 0
+        self.zerar_placar()
+        self.pausar_partida()
         self.bola.recomecar()
         self.primeiro_jogador.recomecar()
         self.segundo_jogador.recomecar()
@@ -135,7 +139,7 @@ class Controle_Servidor:
         return f'{self.pontuacao_primeiro_jogador},{self.pontuacao_segundo_jogador}'
 
     def posicao_atualizada(self):
-        return f'{self.prontos},{self.primeiro_jogador.x},{self.primeiro_jogador.y},{self.segundo_jogador.x},{self.segundo_jogador.y},{self.bola.x},{self.bola.y},{self.bola.x_velocidade},{self.bola.y_velocidade}'
+        return f'{self.prontos},{self.primeiro_jogador.x},{self.primeiro_jogador.y},{self.segundo_jogador.x},{self.segundo_jogador.y},{round(self.bola.x)},{round(self.bola.y)},{round(self.bola.x_velocidade)},{round(self.bola.y_velocidade)}'
     
     def tratamento_colisao(self):
         
