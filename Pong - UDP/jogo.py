@@ -7,7 +7,7 @@ class Jogo:
 
     def __init__(self):
         self.socket = SocketCliente("192.168.56.1", 5555)     
-        #self.socket_placar = SocketCliente("192.168.56.1", 6666)
+        self.socket_placar = SocketCliente("192.168.56.1", 6666)
         self.controle = Controle_Cliente()
 
     def enviar_teclas(self, teclas):
@@ -26,14 +26,19 @@ class Jogo:
         executa = True
         
         while executa:
-            try:
+            #try:
 
                 clock.tick(FPS)
 
                 teclas = pygame.key.get_pressed()
 
                 dados_recebidos = self.enviar_teclas(teclas)
-                self.controle.descompactar_dados_antigo(dados_recebidos)
+                self.controle.descompactar_dados(dados_recebidos)
+                print(dados_recebidos)
+
+                dados_placar = self.socket_placar.receber()
+                self.controle.descompactar_dados_placar(dados_placar)
+                print(dados_placar)
 
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -43,8 +48,8 @@ class Jogo:
                         executa = False
 
                 self.controle.desenhar()
-            except:
-                break
+            #except:
+                #break
 
         self.socket.enviar("SAIR")
         pygame.quit()

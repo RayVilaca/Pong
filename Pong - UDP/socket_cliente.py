@@ -17,3 +17,10 @@ class SocketCliente:
             return dados_recebidos.decode()
         except socket.error as e:
             return str(e)
+
+    def receber(self):
+        try:
+            dados_recebidos, endereco = self.cliente.recvfrom(4096)
+            return dados_recebidos.decode()
+        except socket.error as e:
+            return str(e)
