@@ -7,20 +7,31 @@ class SocketCliente:
         self.servidor = ip_servidor
         self.porta = porta_servidor
         self.endereco = (self.servidor, self.porta)
-        self.identificador_jogador = self.enviar("ID")
+        print("Tentando me conectar ao servidor...")
+        self.identificador_jogador = self.pegar_identificador()
+        print(f"Recebimento de identificacao: {self.identificador_jogador}")
+
+    def pegar_identificador(self):
+        print("Enviando...")
+        self.enviar("ID")
+        print("Recebido...")
+        return self.receber()
 
     def enviar(self, dados_enviar):
         try:
             dados_enviar_codificados = str.encode(dados_enviar)
             self.cliente.sendto(dados_enviar_codificados, self.endereco)
-            dados_recebidos, endereco = self.cliente.recvfrom(4096)
-            return dados_recebidos.decode()
         except socket.error as e:
-            return str(e)
+            raise e
 
     def receber(self):
         try:
-            dados_recebidos, endereco = self.cliente.recvfrom(4096)
-            return dados_recebidos.decode()
+            dados_recebidos, endereco = self.cliente.recvfrom(1024)
+            return dados_recebidos.decode('utf-8')
         except socket.error as e:
-            return str(e)
+            raise e
+
+
+    def encerrar(self):
+        self.cliente.close()
+

@@ -18,8 +18,8 @@ class Jogador:
             self.y += self.velocidade
 
     def recomecar(self):
-        self.x = self.x_partida
-        self.y = self.y_partida
+            self.x = self.x_partida
+            self.y = self.y_partida
 
     def desenhar(self, janela):
         pygame.draw.rect(janela, self.cor, (self.x, self.y, self.largura, self.altura))
@@ -66,21 +66,22 @@ class Controle_Cliente:
             self.canvas.desenhar_componentes(ALTURA_JANELA, LARGURA_JANELA, self.primeiro_jogador, self.segundo_jogador, self.bola, self.pontuacao_primeiro_jogador, self.pontuacao_segundo_jogador)
 
     def descompactar_dados_placar(self, dado):
-        d = dado.split(",")
-        self.pontuacao_primeiro_jogador = int(d[0])
-        self.pontuacao_segundo_jogador = int(d[1])
+        dados_desagrupados = dado.split(",")
+        self.pontuacao_primeiro_jogador = int(dados_desagrupados[0])
+        self.pontuacao_segundo_jogador = int(dados_desagrupados[1])
 
-    def descompactar_dados(self, dado):
-        d = dado.split(",")
-        self.prontos = int(d[0])
-        self.primeiro_jogador.x = int(d[1])
-        self.primeiro_jogador.y = int(d[2])
-        self.segundo_jogador.x = int(d[3])
-        self.segundo_jogador.y = int(d[4])
-        self.bola.x = int(d[5])
-        self.bola.y = int(d[6])
-        self.bola.x_velocidade = int(d[7])
-        self.bola.y_velocidade = int(d[8])
+    def descompactar_dados_movimento(self, dado):
+        dados_desagrupados = dado.split(",")
+        self.prontos = int(dados_desagrupados[0])
+        self.primeiro_jogador.x = int(dados_desagrupados[1])
+        self.primeiro_jogador.y = int(dados_desagrupados[2])
+        self.segundo_jogador.x = int(dados_desagrupados[3])
+        self.segundo_jogador.y = int(dados_desagrupados[4])
+        self.bola.x = int(dados_desagrupados[5])
+        self.bola.y = int(dados_desagrupados[6])
+        self.bola.x_velocidade = int(dados_desagrupados[7])
+        self.bola.y_velocidade = int(dados_desagrupados[8])
+        
 
 class Controle_Servidor:
 
@@ -125,14 +126,17 @@ class Controle_Servidor:
         self.bola.recomecar()
         self.primeiro_jogador.recomecar()
         self.segundo_jogador.recomecar()
+        
 
-    def atualizacao_placar(self):
+    def atualizacao_placar(self, evento):
         if self.bola.x < 0:
             self.pontuacao_segundo_jogador += 1
+            evento.set()
             self.bola.recomecar()
 
         elif self.bola.x > LARGURA_JANELA:
             self.pontuacao_primeiro_jogador += 1
+            evento.set()
             self.bola.recomecar()
 
     def placar_atualizado(self):
@@ -177,7 +181,7 @@ class Controle_Servidor:
     def movimentacao_raquete(self, subir, descer, identificador_jogador):
 
         jogador = self.identificar_jogador(identificador_jogador)
-        
+
         if subir and jogador.y - jogador.velocidade >= 0:
             jogador.movimento(subir = True)
 

@@ -1,9 +1,12 @@
 import sys
+import pygame
 import socket
+import time
+import threading
 from _thread import *
 from socket_servidor import SocketServidor
 from componentes_jogo import Jogador, Bola, Controle_Servidor
-from variaveis_configuracao import PONTUACAO_MAXIMA
+from variaveis_configuracao import PONTUACAO_MAXIMA, FPS
 
 class Servidor:
 
@@ -14,6 +17,9 @@ class Servidor:
         self.identificadores = [1, 0]
         self.jogadores = {}
         self.enderecos_placar = {}
+        self.lock = threading.Lock()
+        self.evento = threading.Event()
+        self.parar_thread_enviar_placar = False
 
     def associar_identificador(self, endereco_jogador):
         self.jogadores[endereco_jogador] = self.identificadores.pop()
@@ -23,76 +29,113 @@ class Servidor:
         self.identificadores.sort(reverse = True)
         self.jogadores.pop(endereco_jogador)
 
+    def thread_movimentar_bola(self):
+        while not self.parar_thread_enviar_placar:
+            time.sleep(0.001)
+            self.lock.acquire()
+            try:
+                if self.controle.todos_prontos():
+                    self.controle.movimentar_bola()
+
+                self.controle.tratamento_colisao()
+                self.controle.atualizacao_placar(self.evento)
+            except:
+                break
+            finally:
+                self.lock.release()
+
+
+    def thread_enviar_placar(self):
+        while True:
+            self.evento.wait()
+
+            if self.parar_thread_enviar_placar:
+                break
+
+            self.lock.acquire()
+            try:
+                if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
+                    self.controle.recomecar()
+                    self.controle.comecar_partida()
+
+                for endereco in list(self.enderecos_placar.values()):
+                    self.socket_placar.enviar(self.controle.placar_atualizado(), endereco)
+            except:
+                break
+            finally:
+                self.lock.release()
+
+            self.evento.clear()
+        
+        print("Encerrando a thread...")          
+
     def executar(self):
+
+        threading.Thread(target=self.thread_enviar_placar).start()
+        threading.Thread(target=self.thread_movimentar_bola).start()
 
         while True:
 
-            #try:
-                print("Esperando dados ...")
+            try:
+
                 dados_recebidos, endereco_jogador = self.socket.receber()
-                dados_recebidos_decodificados = dados_recebidos.decode('utf-8')
-                print(f"Dados recebidos: {dados_recebidos_decodificados}, {endereco_jogador}")
-                if not dados_recebidos_decodificados:
-                    break
+
+                if not dados_recebidos:
+                    continue
 
                 if endereco_jogador not in self.jogadores and len(self.identificadores) == 0:
                     print("Apenas 2 jogadores por vez")
-                    break
+                    continue
 
                 elif endereco_jogador not in self.jogadores:
+                    print(f"Novo jogador: {endereco_jogador}")
                     self.associar_identificador(endereco_jogador)
                     if len(self.identificadores) == 0:
                         self.controle.comecar_partida()
                 
                 identificador_jogador = self.jogadores[endereco_jogador]
 
-                if dados_recebidos_decodificados == "ID":  
+                if dados_recebidos == "ID":  
                     self.socket.enviar(f'{identificador_jogador}', endereco_jogador)
                     dados_placar_recebidos, endereco_placar_jogador = self.socket_placar.receber()
-                    print(f"Placar: {dados_recebidos.decode()}, {endereco_placar_jogador}")
                     self.socket_placar.enviar(f'{identificador_jogador}', endereco_placar_jogador)
                     self.enderecos_placar[endereco_jogador] = endereco_placar_jogador
                     continue
 
-                if dados_recebidos_decodificados == "SAIR":
+                if dados_recebidos == "SAIR":
                     if len(self.identificadores) < 2:
-                        print("Conexão fechada")
+                        print(f"O jogador de id {identificador_jogador} saiu...")
                         self.desassociar_identificador(endereco_jogador)
                         self.controle.pausar_partida()
-                    
-                    self.socket.enviar("Ok", endereco_jogador)
-                        
+
                     if len(self.identificadores) == 2:
                         self.controle.recomecar()
-                        print("Esperando uma nova dupla ...")
+                        #print("Esperando uma nova dupla ...")
+                        break
 
                     continue
 
-                print(f'Posição:{identificador_jogador}:{self.controle.posicao_atualizada()}')
+                subir, descer = map(int, dados_recebidos.split(','))
 
-                if identificador_jogador == 0:
-                    if self.controle.todos_prontos():
-                        self.controle.movimentar_bola()
+                self.lock.acquire()
+                try:
+                    if subir or descer:
+                        self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
 
-                    if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
-                        self.controle.recomecar()
-                        self.controle.comecar_partida()
+                    self.socket.enviar(self.controle.posicao_atualizada(), endereco_jogador)
+                except:
+                    break
+                finally:
+                    self.lock.release()
+            
+            except:
+                break
 
-                subir, descer = map(int, dados_recebidos_decodificados.split(','))
-
-                print(f"Identificador[{identificador_jogador}]: subir({'X' if subir else ''}), descer({'X' if descer else ''})")
-
-                if subir or descer:
-                    self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
-
-                if identificador_jogador == 0:
-                    self.controle.tratamento_colisao()
-                    self.controle.atualizacao_placar()
-                
-                self.socket.enviar(self.controle.posicao_atualizada(), endereco_jogador)
-                self.socket_placar.enviar(self.controle.placar_atualizado(), self.enderecos_placar[endereco_jogador])
-            #except:
-                #break
+        self.socket.encerrar()
+        self.socket_placar.encerrar()
+        self.parar_thread_enviar_placar = True
+        self.evento.set()
+        print("Encerrando o jogo...")
 
         
 
