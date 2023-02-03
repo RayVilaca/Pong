@@ -48,8 +48,7 @@ class Jogo:
         teclas = "Nenhuma"
         executa = True
 
-        t = threading.Thread(target=self.thread_receber_placar)
-        t.start()
+        threading.Thread(target=self.thread_receber_placar).start()
         
         while executa:
             try:
@@ -72,6 +71,8 @@ class Jogo:
                 self.lock.acquire()
                 try:
                     self.controle.desenhar()
+                except:
+                    break
                 finally:
                     self.lock.release()
 
