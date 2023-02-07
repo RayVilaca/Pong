@@ -19,15 +19,15 @@ class SocketCliente:
 
     def enviar(self, dados_enviar):
         try:
-            dados_enviar_codificados = str.encode(dados_enviar)
-            self.cliente.sendto(dados_enviar_codificados, self.endereco)
+            dados_enviar_bytes = str.encode(dados_enviar)
+            self.cliente.sendto(dados_enviar_bytes, self.endereco)
         except socket.error as e:
             raise e
 
     def receber(self):
         try:
-            dados_recebidos, endereco = self.cliente.recvfrom(1024)
-            return dados_recebidos.decode('utf-8')
+            dados_recebidos_bytes, endereco = self.cliente.recvfrom(1024)
+            return dados_recebidos_bytes.decode('utf-8')
         except socket.error as e:
             raise e
 
