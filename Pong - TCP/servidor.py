@@ -1,5 +1,7 @@
 import sys
+import time
 import socket
+import threading
 from _thread import *
 from socket_servidor import SocketServidor
 from componentes_jogo import Jogador, Bola, Controle_Servidor
@@ -12,8 +14,69 @@ class Servidor:
         self.socket_placar = SocketServidor("192.168.56.1", 6666)
         self.controle = Controle_Servidor()
         self.identificadores = [1, 0]
+        self.lock = threading.Lock()
+        self.evento = threading.Event()
+        self.parar_threads = False
+        self.conn_placares = []
+
+    def receber_dados(self, conn_movimento):
+        
+        data = conn_movimento.recv(4096)
+        reply = data.decode('utf-8')
+
+        if not data:
+            return None, None
+
+        return map(int, reply.split(','))
+
+    def pegar_identificador(self):
+        return self.identificadores.pop()
+
+    def devolver_identificador(self, identificador_jogador):
+        self.identificadores.append(identificador_jogador)
+        self.identificadores.sort(reverse = True)
+
+    def thread_movimentar_bola(self):
+        while not self.parar_threads:
+            time.sleep(0.001)
+            self.lock.acquire()
+            try:
+                if self.controle.todos_prontos():
+                    self.controle.movimentar_bola()
+
+                self.controle.tratamento_colisao()
+                self.controle.atualizacao_placar(self.evento)
+            except:
+                break
+            finally:
+                self.lock.release()
+
+    def thread_enviar_placar(self):
+        while True:
+            self.evento.wait()
+
+            if self.parar_threads:
+                break
+
+            self.lock.acquire()
+            try:
+                if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
+                    self.controle.recomecar()
+                    self.controle.comecar_partida()
+
+                for conn in list(self.conn_placares):
+                    conn.sendall(str.encode(self.controle.placar_atualizado()))
+            except:
+                break
+            finally:
+                self.lock.release()
+
+            self.evento.clear()
 
     def executar(self):
+
+        threading.Thread(target=self.thread_enviar_placar).start()
+        threading.Thread(target=self.thread_movimentar_bola).start()
 
         while True:
             conn_movimento, addr_movimento = self.socket.aceitar_conexao()
@@ -35,27 +98,15 @@ class Servidor:
             #Enviar ao cliente o identificador correspondente a raquete associada a ele
             conn_placar.send(str.encode(str(identificador_jogador)))
 
+            self.conn_placares.append(conn_placar)
+
+
             start_new_thread(self.thread_cliente, (conn_movimento, conn_placar, identificador_jogador))
 
 
-    def receber_dados(self, conn_movimento):
-        data = conn_movimento.recv(4096)
-        reply = data.decode('utf-8')
 
-        if not data:
-            return None, None
-
-        return map(int, reply.split(','))
-
-    def pegar_identificador(self):
-        return self.identificadores.pop()
-
-    def devolver_identificador(self, identificador_jogador):
-        self.identificadores.append(identificador_jogador)
-        self.identificadores.sort(reverse = True)
 
     def thread_cliente(self, conn_movimento, conn_placar, identificador_jogador): 
-        reply = ''
         
         if len(self.identificadores) == 1:
             self.controle.recomecar()
@@ -65,13 +116,6 @@ class Servidor:
         
         while True:
             try:
-                if identificador_jogador == 0:
-                    if self.controle.todos_prontos():
-                        self.controle.movimentar_bola()
-
-                    if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
-                        self.controle.recomecar()
-                        self.controle.comecar_partida()
 
                 subir, descer = self.receber_dados(conn_movimento)
 
@@ -80,22 +124,22 @@ class Servidor:
                 
                 print(f"Identificador[{identificador_jogador}]: subir({'X' if subir else ''}), descer({'X' if descer else ''})")
 
-                if subir or descer:
-                    self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
-
-                if identificador_jogador == 0:
-                    self.controle.tratamento_colisao()
-                    self.controle.atualizacao_placar()
+                self.lock.acquire()
+                try:
+                    if subir or descer:
+                        self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
                 
-                conn_movimento.sendall(str.encode(self.controle.posicao_atualizada()))
-                conn_placar.sendall(str.encode(self.controle.placar_atualizado()))
+                    conn_movimento.sendall(str.encode(self.controle.posicao_atualizada()))
+                except:
+                    break
+                finally:
+                    self.lock.release()
             except:
                 break
 
-        print("Conexão fechada")
-
         self.devolver_identificador(identificador_jogador)
         self.controle.pausar_partida()
+        print(f"O jogador de id {identificador_jogador} saiu...")
         conn_movimento.close()
         conn_placar.close()
 

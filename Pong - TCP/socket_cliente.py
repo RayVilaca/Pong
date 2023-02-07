@@ -11,17 +11,21 @@ class SocketCliente:
 
     def conectar(self):
         self.cliente.connect(self.endereco)
-        return self.cliente.recv(4096).decode()
+        return self.cliente.recv(1024).decode()
 
     def enviar(self, dado):
         try:
-            self.cliente.send(str.encode(dado))
-            return self.cliente.recv(4096).decode()
+            dados_enviar_bytes = str.encode(dado)
+            self.cliente.send(dados_enviar_bytes)
         except socket.error as e:
-            return str(e)
+            raise e
 
     def receber(self):
         try:
-            return self.cliente.recv(4096).decode()
+            dados_recebidos_bytes = self.cliente.recv(1024)
+            return dados_recebidos_bytes.decode('utf-8')
         except socket.error as e:
-            return str(e)
+            raise e
+
+    def encerrar(self):
+        self.cliente.close()
