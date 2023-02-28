@@ -19,7 +19,7 @@ class Servidor:
         self.enderecos_placar = {}
         self.lock = threading.Lock()
         self.evento = threading.Event()
-        self.parar_thread_enviar_placar = False
+        self.parar_threads = False
 
     def associar_identificador(self, endereco_jogador):
         self.jogadores[endereco_jogador] = self.identificadores.pop()
@@ -30,7 +30,7 @@ class Servidor:
         self.jogadores.pop(endereco_jogador)
 
     def thread_movimentar_bola(self):
-        while not self.parar_thread_enviar_placar:
+        while not self.parar_threads:
             time.sleep(0.001)
             self.lock.acquire()
             try:
@@ -43,13 +43,13 @@ class Servidor:
                 break
             finally:
                 self.lock.release()
-
+        print("Thread para movimentar a bola encerrada...")
 
     def thread_enviar_placar(self):
         while True:
             self.evento.wait()
 
-            if self.parar_thread_enviar_placar:
+            if self.parar_threads:
                 break
 
             self.lock.acquire()
@@ -67,7 +67,7 @@ class Servidor:
 
             self.evento.clear()
         
-        print("Encerrando a thread...")          
+        print("Thread para enviar o placar encerrada...")         
 
     def executar(self):
 
@@ -109,7 +109,7 @@ class Servidor:
                         self.controle.pausar_partida()
 
                     if len(self.identificadores) == 2:
-                        self.controle.recomecar()
+                        #self.controle.recomecar()
                         #print("Esperando uma nova dupla ...")
                         break
 
@@ -133,11 +133,6 @@ class Servidor:
 
         self.socket.encerrar()
         self.socket_placar.encerrar()
-        self.parar_thread_enviar_placar = True
+        self.parar_threads = True
         self.evento.set()
         print("Encerrando o jogo...")
-
-        
-
-
-
