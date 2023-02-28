@@ -50,6 +50,7 @@ class Servidor:
                 break
             finally:
                 self.lock.release()
+        print("Thread para movimentar a bola encerrada...")
 
     def thread_enviar_placar(self):
         while True:
@@ -72,6 +73,7 @@ class Servidor:
                 self.lock.release()
 
             self.evento.clear()
+        print("Thread para enviar o placar encerrada...")  
 
     def executar(self):
 
@@ -79,38 +81,39 @@ class Servidor:
         threading.Thread(target=self.thread_movimentar_bola).start()
 
         while True:
-            conn_movimento, addr_movimento = self.socket.aceitar_conexao()
-            print("Conectado: ", addr_movimento)
+            try:
+                conn_movimento, addr_movimento = self.socket.aceitar_conexao()
+                print("Conectado: ", addr_movimento)
+
+                if len(self.identificadores) == 0:
+                    print("Apenas 2 jogadores por vez")
+                    conn_movimento.close()
+                    continue
+
+                #Enviar ao cliente o identificador correspondente a raquete associada a ele
+                identificador_jogador = self.pegar_identificador()
+                conn_movimento.send(str.encode(str(identificador_jogador)))
+
+                conn_placar, addr_placar = self.socket_placar.aceitar_conexao()
+                print("Conectado2: ", addr_placar)
+                
+                #Enviar ao cliente o identificador correspondente a raquete associada a ele
+                conn_placar.send(str.encode(str(identificador_jogador)))
+
+                self.conn_placares.append(conn_placar)
 
 
-            if len(self.identificadores) == 0:
-                print("Apenas 2 jogadores por vez")
-                conn_movimento.close()
-                continue
-
-            #Enviar ao cliente o identificador correspondente a raquete associada a ele
-            identificador_jogador = self.pegar_identificador()
-            conn_movimento.send(str.encode(str(identificador_jogador)))
-
-            conn_placar, addr_placar = self.socket_placar.aceitar_conexao()
-            print("Conectado2: ", addr_placar)
-            
-            #Enviar ao cliente o identificador correspondente a raquete associada a ele
-            conn_placar.send(str.encode(str(identificador_jogador)))
-
-            self.conn_placares.append(conn_placar)
-
-
-            start_new_thread(self.thread_cliente, (conn_movimento, conn_placar, identificador_jogador))
-
-
+                start_new_thread(self.thread_cliente, (conn_movimento, conn_placar, identificador_jogador))
+            except:
+                print("Encerrando o jogo...")
+                self.parar_threads = True
+                evento.set()
 
 
     def thread_cliente(self, conn_movimento, conn_placar, identificador_jogador): 
         
         if len(self.identificadores) == 1:
             self.controle.recomecar()
-
         else:
             self.controle.comecar_partida()
         
@@ -142,5 +145,8 @@ class Servidor:
         print(f"O jogador de id {identificador_jogador} saiu...")
         conn_movimento.close()
         conn_placar.close()
+
+        if len(self.identificadores) == 2:
+            raise Exceptio()
 
 
