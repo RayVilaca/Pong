@@ -1,4 +1,5 @@
 import pygame
+import threading
 from socket_cliente import SocketCliente
 from componentes_jogo import Jogador, Bola, Canvas, Controle_Cliente
 from variaveis_configuracao import FPS

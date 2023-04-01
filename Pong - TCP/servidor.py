@@ -16,11 +16,9 @@ class Servidor:
         self.identificadores = [1, 0]
         self.lock = threading.Lock()
         self.evento = threading.Event()
-        self.parar_threads = False
-        self.conn_placares = []
+        self.conn_placares = {}
 
     def receber_dados(self, conn_movimento):
-        
         data = conn_movimento.recv(4096)
         reply = data.decode('utf-8')
 
@@ -29,16 +27,52 @@ class Servidor:
 
         return map(int, reply.split(','))
 
+    def todos_identificadores_indisponiveis(self):
+        self.lock.acquire()
+        try:
+            return len(self.identificadores) == 0
+        finally:
+            self.lock.release()
+
+    def todos_identificadores_disponiveis(self):
+        self.lock.acquire()
+        try:
+            return len(self.identificadores) == 2
+        finally:
+            self.lock.release()
+
     def pegar_identificador(self):
-        return self.identificadores.pop()
+        self.lock.acquire()
+        try:
+            return self.identificadores.pop()
+        finally:
+            self.lock.release()   
 
     def devolver_identificador(self, identificador_jogador):
-        self.identificadores.append(identificador_jogador)
-        self.identificadores.sort(reverse = True)
+        self.lock.acquire()
+        try:
+            self.identificadores.append(identificador_jogador)
+            self.identificadores.sort(reverse = True)
+        finally:
+            self.lock.release() 
+
+    def inserir_socket_placar_lista(self, identificador_jogador, conn_placar):
+        self.lock.acquire()
+        try:
+            self.conn_placares[identificador_jogador] = conn_placar
+        finally:
+            self.lock.release() 
+
+    def remover_socket_placar_lista(self, identificador_jogador):
+        self.lock.acquire()
+        try:
+            self.conn_placares.pop(identificador_jogador)
+        finally:
+            self.lock.release() 
 
     def thread_movimentar_bola(self):
-        while not self.parar_threads:
-            time.sleep(0.001)
+        while True:
+            time.sleep(0.003)
             self.lock.acquire()
             try:
                 if self.controle.todos_prontos():
@@ -56,16 +90,13 @@ class Servidor:
         while True:
             self.evento.wait()
 
-            if self.parar_threads:
-                break
-
             self.lock.acquire()
             try:
                 if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
                     self.controle.recomecar()
                     self.controle.comecar_partida()
 
-                for conn in list(self.conn_placares):
+                for conn in list(self.conn_placares.values()):
                     conn.sendall(str.encode(self.controle.placar_atualizado()))
             except:
                 break
@@ -83,32 +114,31 @@ class Servidor:
         while True:
             try:
                 conn_movimento, addr_movimento = self.socket.aceitar_conexao()
-                print("Conectado: ", addr_movimento)
+                conn_movimento.settimeout(60)
+                
+                print("Conectado socket movimento: ", addr_movimento)
 
-                if len(self.identificadores) == 0:
+                if self.todos_identificadores_indisponiveis():
                     print("Apenas 2 jogadores por vez")
                     conn_movimento.close()
                     continue
 
                 #Enviar ao cliente o identificador correspondente a raquete associada a ele
                 identificador_jogador = self.pegar_identificador()
+
                 conn_movimento.send(str.encode(str(identificador_jogador)))
 
                 conn_placar, addr_placar = self.socket_placar.aceitar_conexao()
-                print("Conectado2: ", addr_placar)
+                print("Conectado socket placar: ", addr_placar)
                 
                 #Enviar ao cliente o identificador correspondente a raquete associada a ele
                 conn_placar.send(str.encode(str(identificador_jogador)))
 
-                self.conn_placares.append(conn_placar)
-
+                self.inserir_socket_placar_lista(identificador_jogador, conn_placar)
 
                 start_new_thread(self.thread_cliente, (conn_movimento, conn_placar, identificador_jogador))
             except:
-                print("Encerrando o jogo...")
-                self.parar_threads = True
-                evento.set()
-
+                break
 
     def thread_cliente(self, conn_movimento, conn_placar, identificador_jogador): 
         
@@ -116,37 +146,41 @@ class Servidor:
             self.controle.recomecar()
         else:
             self.controle.comecar_partida()
+
+        numero_de_iteracoes = 0
         
         while True:
             try:
-
                 subir, descer = self.receber_dados(conn_movimento)
+                numero_de_iteracoes += 1;
 
                 if subir == None and descer == None:
                     break
                 
-                print(f"Identificador[{identificador_jogador}]: subir({'X' if subir else ''}), descer({'X' if descer else ''})")
+                #print(f"Identificador[{identificador_jogador}]: subir({'X' if subir else ''}), descer({'X' if descer else ''})")
 
                 self.lock.acquire()
                 try:
                     if subir or descer:
                         self.controle.movimentacao_raquete(subir, descer, identificador_jogador)
-                
+                    
+                    if numero_de_iteracoes == 1:
+                        conn_placar.sendall(str.encode(self.controle.placar_atualizado()))
+
                     conn_movimento.sendall(str.encode(self.controle.posicao_atualizada()))
                 except:
                     break
                 finally:
                     self.lock.release()
-            except:
+                    
+            except Exception as e:
+                print("Erro desconhecido: ", end="")
+                print(e)
                 break
 
         self.devolver_identificador(identificador_jogador)
+        self.remover_socket_placar_lista(identificador_jogador)
         self.controle.pausar_partida()
         print(f"O jogador de id {identificador_jogador} saiu...")
         conn_movimento.close()
         conn_placar.close()
-
-        if len(self.identificadores) == 2:
-            raise Exceptio()
-
-
