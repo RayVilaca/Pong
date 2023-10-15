@@ -8,6 +8,7 @@ class SocketTCPCliente:
         self.porta = porta_servidor
         self.endereco = (self.servidor, self.porta)
         self.identificador_jogador = self.conectar()
+        self.cliente.settimeout(1)
 
     def conectar(self):
         self.cliente.connect(self.endereco)

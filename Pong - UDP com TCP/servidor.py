@@ -32,7 +32,7 @@ class Servidor:
 
     def thread_movimentar_bola(self):
         while self.Executar_threads:
-            time.sleep(0.001)
+            time.sleep(0.003)
             self.lock.acquire()
             try:
                 if self.controle.todos_prontos():
@@ -61,6 +61,8 @@ class Servidor:
 
                 for conn in list(self.conn_placares):
                     conn.sendall(str.encode(self.controle.placar_atualizado()))
+            except socket.timeout:
+                continue
             except:
                 break
             finally:
@@ -77,7 +79,7 @@ class Servidor:
 
         while True:
 
-            #try:
+            try:
 
                 dados_recebidos, endereco_jogador = self.socket.receber()
 
@@ -129,8 +131,10 @@ class Servidor:
                 finally:
                     self.lock.release()
             
-            #except:
-                #break
+            except socket.timeout:
+                continue
+            except:
+                break
 
         self.socket.encerrar()
         self.Executar_threads = False

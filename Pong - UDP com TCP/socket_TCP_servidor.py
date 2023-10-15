@@ -8,6 +8,7 @@ class SocketTCPServidor:
         self.porta = porta
         self.endereco = (self.ip, self.porta)
         self.escutar()
+        self.servidor.settimeout(60) 
 
     def aceitar_conexao(self):
         return self.servidor.accept()

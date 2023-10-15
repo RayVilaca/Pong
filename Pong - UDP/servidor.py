@@ -19,19 +19,26 @@ class Servidor:
         self.enderecos_placar = {}
         self.lock = threading.Lock()
         self.evento = threading.Event()
-        self.parar_threads = False
 
     def associar_identificador(self, endereco_jogador):
-        self.jogadores[endereco_jogador] = self.identificadores.pop()
+        self.lock.acquire()
+        try:
+            self.jogadores[endereco_jogador] = self.identificadores.pop()
+        finally:
+            self.lock.release()  
 
     def desassociar_identificador(self, endereco_jogador):
-        self.identificadores.append(self.jogadores[endereco_jogador])
-        self.identificadores.sort(reverse = True)
-        self.jogadores.pop(endereco_jogador)
+        self.lock.acquire()
+        try:
+            self.identificadores.append(self.jogadores[endereco_jogador])
+            self.identificadores.sort(reverse = True)
+            self.jogadores.pop(endereco_jogador)
+        finally:
+            self.lock.release()
 
     def thread_movimentar_bola(self):
-        while not self.parar_threads:
-            time.sleep(0.001)
+        while True:
+            time.sleep(0.003)
             self.lock.acquire()
             try:
                 if self.controle.todos_prontos():
@@ -49,9 +56,6 @@ class Servidor:
         while True:
             self.evento.wait()
 
-            if self.parar_threads:
-                break
-
             self.lock.acquire()
             try:
                 if self.controle.pegar_pontuacao_primeiro_jogador() >= PONTUACAO_MAXIMA or self.controle.pegar_pontuacao_segundo_jogador() >= PONTUACAO_MAXIMA:
@@ -59,6 +63,7 @@ class Servidor:
                     self.controle.comecar_partida()
 
                 for endereco in list(self.enderecos_placar.values()):
+                    print(endereco)
                     self.socket_placar.enviar(self.controle.placar_atualizado(), endereco)
             except:
                 break
@@ -109,9 +114,8 @@ class Servidor:
                         self.controle.pausar_partida()
 
                     if len(self.identificadores) == 2:
-                        #self.controle.recomecar()
-                        #print("Esperando uma nova dupla ...")
-                        break
+                        self.controle.recomecar()
+                        print("Esperando uma nova dupla ...")
 
                     continue
 
@@ -128,6 +132,8 @@ class Servidor:
                 finally:
                     self.lock.release()
             
+            except socket.timeout:
+                continue
             except:
                 break
 

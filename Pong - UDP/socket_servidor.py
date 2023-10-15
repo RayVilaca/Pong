@@ -8,6 +8,7 @@ class SocketServidor:
         self.porta = porta
         self.endereco = (self.ip, self.porta)
         self.escutar()
+        self.servidor.settimeout(60) 
 
     def receber(self):
         try:

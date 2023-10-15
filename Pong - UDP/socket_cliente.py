@@ -7,14 +7,11 @@ class SocketCliente:
         self.servidor = ip_servidor
         self.porta = porta_servidor
         self.endereco = (self.servidor, self.porta)
-        print("Tentando me conectar ao servidor...")
         self.identificador_jogador = self.pegar_identificador()
-        print(f"Recebimento de identificacao: {self.identificador_jogador}")
+        self.cliente.settimeout(1) 
 
     def pegar_identificador(self):
-        print("Enviando...")
         self.enviar("ID")
-        print("Recebido...")
         return self.receber()
 
     def enviar(self, dados_enviar):

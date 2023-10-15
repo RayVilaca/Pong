@@ -39,6 +39,8 @@ class Jogo:
                 finally:
                     self.lock.release()
                 print(dados_placar)
+            except socket.timeout:
+                continue
             except:
                 break
 
@@ -76,7 +78,9 @@ class Jogo:
                     break
                 finally:
                     self.lock.release()
-
+		
+            except socket.timeout:
+                continue
             except:
                 break
 

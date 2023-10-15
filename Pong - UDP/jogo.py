@@ -49,13 +49,13 @@ class Jogo:
         executa = True
 
         threading.Thread(target=self.thread_receber_placar).start()
-        
+
         while executa:
             try:
                 clock.tick(FPS)
                 teclas = pygame.key.get_pressed()
 
-                self.enviar_teclas(teclas)                
+                self.enviar_teclas(teclas)              
 
                 dados_recebidos = self.socket.receber()
                 
@@ -76,6 +76,8 @@ class Jogo:
                 finally:
                     self.lock.release()
 
+            except socket.timeout:
+                continue
             except:
                 break
 

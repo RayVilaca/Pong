@@ -114,7 +114,6 @@ class Servidor:
         while True:
             try:
                 conn_movimento, addr_movimento = self.socket.aceitar_conexao()
-                conn_movimento.settimeout(60)
                 
                 print("Conectado socket movimento: ", addr_movimento)
 
