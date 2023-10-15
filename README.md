@@ -25,3 +25,12 @@ O arquivo **requirements.txt** lista todas as dependências essenciais.
 ```python3 executar_cliente.py```
 
 OBS: O jogo começa apenas quando os dois jogadores se conectarem
+
+### Regras:
+O jogador que se conectar primeiro será representado pela raquete vermelha à esquerda e usará as teclas W e S para movimentá-la. Enquanto isso, o segundo jogador será a raquete azul à direita e utilizará as setas para cima e para baixo. O objetivo do jogo é marcar 10 pontos primeiro para vencer.
+
+### Imagens do jogo:
+
+![](/images/img-espera-jogador.png)
+
+![](/images/img-comeca-partida.png)
