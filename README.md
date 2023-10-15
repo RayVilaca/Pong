@@ -24,4 +24,4 @@ O arquivo **requirements.txt** lista todas as dependências essenciais.
 
 ```python3 executar_cliente.py```
 
-OBS: O jogo começa apenas quando os dois jogadores se conectam
+OBS: O jogo começa apenas quando os dois jogadores se conectarem
